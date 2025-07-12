@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>江戸城外堀跡一周ルート</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: clamp(1.5em, 4vw, 2.5em);
+            font-weight: 300;
+        }
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: clamp(0.9em, 2vw, 1.1em);
+        }
+        .map-container {
+            position: relative;
+            padding: 15px;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .custom-marker {
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 3px solid white;
+            transition: all 0.3s ease;
+        }
+        .custom-marker:hover {
+            transform: scale(1.2);
+        }
+        .legend {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 0.8em;
+            z-index: 1000;
+            max-width: 200px;
+        }
+        .legend h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 1em;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .info-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        .route-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-left: 4px solid #3498db;
+            transition: transform 0.3s ease;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
+        }
+        .info-card h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        .info-card p {
+            margin: 0;
+            color: #555;
+            line-height: 1.6;
+            font-size: 0.9em;
+        }
+        .stations-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .stations-list h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        .station-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        .station-item:hover {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            transform: translateX(5px);
+        }
+        .station-item:last-child {
+            border-bottom: none;
+        }
+        .station-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 0.8em;
+            color: white;
+            flex-shrink: 0;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .station-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .station-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+        }
+        .station-detail {
+            color: #666;
+            font-size: 0.8em;
+            line-height: 1.4;
+        }
+        .controls {
+            margin: 15px 0;
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+            flex: 1;
+            min-width: 120px;
+            max-width: 180px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        /* スマホ対応 */
+        @media (max-width: 768px) {
+            body { padding: 5px; }
+            .container { border-radius: 10px; }
+            .header { padding: 15px; }
+            .map-container { padding: 10px; }
+            #map { height: 400px; }
+            .legend { 
+                top: 10px; 
+                right: 10px; 
+                max-width: 150px;
+                font-size: 0.7em;
+                padding: 10px;
+            }
+            .info-panel { padding: 15px; }
+            .route-info { grid-template-columns: 1fr; gap: 10px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .btn { max-width: none; margin: 5px 0; }
+        }
+
+        /* Leafletのポップアップカスタマイズ */
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .leaflet-popup-content {
+            margin: 13px 19px;
+            line-height: 1.5;
+        }
+        .popup-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+        .popup-desc {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏯 江戸城外堀跡一周ルート</h1>
+            <p>江戸時代の外堀の痕跡を辿る歴史散歩コース（約15km）</p>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="legend">
+                <h4>📍 ルートガイド</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>スタート</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8e44ad;"></div>
+                    <span>ゴール</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>通過点</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="showFullRoute()">🗺️ 全ルート表示</button>
+                <button class="btn" onclick="animateRoute()">📍 順番に表示</button>
+                <button class="btn" onclick="toggleRoute()">🚶 ルート表示切替</button>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="route-info">
+                <div class="info-card">
+                    <h3>📏 ルート詳細</h3>
+                    <p>総距離：約15km<br>
+                    所要時間：3-4時間<br>
+                    歩数：約20,000歩<br>
+                    標高差：約50m</p>
+                </div>
+                <div class="info-card">
+                    <h3>🌟 見どころ</h3>
+                    <p>江戸城の歴史遺構、現代の東京都心部の景観、四季折々の自然、皇居外苑の美しい庭園を楽しめます。</p>
+                </div>
+                <div class="info-card">
+                    <h3>🚇 アクセス抜群</h3>
+                    <p>全ての駅で複数路線が利用可能。どの駅からでもスタート・ゴールでき、途中離脱も容易です。</p>
+                </div>
+            </div>
+            
+            <div class="stations-list">
+                <h3>📍 主要通過ポイント（クリックで地図上に表示）</h3>
+                <div class="station-item" onclick="focusPoint(0)">
+                    <div class="station-number" style="background: #27ae60;">S</div>
+                    <div class="station-info">
+                        <div class="station-name">飯田橋駅・外堀公園</div>
+                        <div class="station-detail">外堀の痕跡が最も残る区間。桜の名所として有名</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(1)">
+                    <div class="station-number" style="background: #3498db;">1</div>
+                    <div class="station-info">
+                        <div class="station-name">四ツ谷駅・四ツ谷見附跡</div>
+                        <div class="station-detail">江戸城の石垣が現存。上智大学側に見学可能</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(2)">
+                    <div class="station-number" style="background: #e74c3c;">2</div>
+                    <div class="station-info">
+                        <div class="station-name">赤坂見附駅・弁慶橋</div>
+                        <div class="station-detail">赤坂御用地の緑と堀跡の石垣が美しい</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(3)">
+                    <div class="station-number" style="background: #f39c12;">3</div>
+                    <div class="station-info">
+                        <div class="station-name">虎ノ門・愛宕神社</div>
+                        <div class="station-detail">出世の石段で有名。23区内で最も高い自然の山</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(4)">
+                    <div class="station-number" style="background: #9b59b6;">4</div>
+                    <div class="station-info">
+                        <div class="station-name">新橋・汐留</div>
+                        <div class="station-detail">江戸時代の海岸線跡。現代的な高層ビル群</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(5)">
+                    <div class="station-number" style="background: #1abc9c;">5</div>
+                    <div class="station-info">
+                        <div class="station-name">銀座・数寄屋橋跡</div>
+                        <div class="station-detail">外堀最南端。現在は首都高速が通る</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(6)">
+                    <div class="station-number" style="background: #34495e;">6</div>
+                    <div class="station-info">
+                        <div class="station-name">大手町・和田倉門</div>
+                        <div class="station-detail">江戸城本丸に最も近いエリア。皇居外苑の美しい景観</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(7)">
+                    <div class="station-number" style="background: #e67e22;">7</div>
+                    <div class="station-info">
+                        <div class="station-name">神田・常盤橋跡</div>
+                        <div class="station-detail">江戸城への正式な入口だった場所。現在は首都高速下</div>
+                    </div>
+                </div>
+                <div class="station-item" onclick="focusPoint(8)">
+                    <div class="station-number" style="background: #8e44ad;">G</div>
+                    <div class="station-info">
+                        <div class="station-name">飯田橋駅（ゴール）</div>
+                        <div class="station-detail">一周完了！達成感を味わいながら電車で帰宅</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+    <script>
+    // グローバル変数の定義
+    let map;
+    const markers = [];
+    let polyline;
+    let animationInterval;
+    
+    // ルートポイントのデータ
+    const routePoints = [
+        {lat: 35.7022, lng: 139.7445, name: "飯田橋駅・外堀公園", desc: "外堀の痕跡が最も残る区間。桜の名所として有名。", color: "#27ae60", label: "S"},
+        {lat: 35.6956, lng: 139.7313, name: "四ツ谷駅・四ツ谷見附跡", desc: "江戸城の石垣が現存。上智大学側に見学可能。", color: "#3498db", label: "1"},
+        {lat: 35.6794, lng: 139.7368, name: "赤坂見附駅・弁慶橋", desc: "赤坂御用地の緑と堀跡の石垣が美しい。", color: "#e74c3c", label: "2"},
+        {lat: 35.6681, lng: 139.7516, name: "虎ノ門・愛宕神社", desc: "出世の石段で有名。23区内で最も高い自然の山。", color: "#f39c12", label: "3"},
+        {lat: 35.6654, lng: 139.7587, name: "新橋・汐留", desc: "江戸時代の海岸線跡。現代的な高層ビル群。", color: "#9b59b6", label: "4"},
+        {lat: 35.6719, lng: 139.7648, name: "銀座・数寄屋橋跡", desc: "外堀最南端。現在は首都高速が通る。", color: "#1abc9c", label: "5"},
+        {lat: 35.6814, lng: 139.7661, name: "大手町・和田倉門", desc: "江戸城本丸に最も近いエリア。皇居外苑の美しい景観。", color: "#34495e", label: "6"},
+        {lat: 35.6916, lng: 139.7707, name: "神田・常盤橋跡", desc: "江戸城への正式な入口だった場所。現在は首都高速下。", color: "#e67e22", label: "7"},
+        {lat: 35.7022, lng: 139.7445, name: "飯田橋駅（ゴール）", desc: "一周完了！達成感を味わいながら電車で帰宅。", color: "#8e44ad", label: "G"}
+    ];
+
+    // 地図を初期化する関数
+    function initMap() {
+        // 既存のマップインスタンスがあれば削除
+        if (map) {
+            map.remove();
+        }
+        
+        // 地図を作成
+        map = L.map('map').setView([35.6850, 139.7514], 14);
+        
+        // OpenStreetMapタイルレイヤーを追加
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+        
+        // マーカーとポップアップを追加
+        routePoints.forEach((point, index) => {
+            // ★修正点: アイコンのHTML生成方法を修正
+            const icon = L.divIcon({
+                className: '', // ラッパーのクラスはなし
+                html: `<div class="custom-marker" style="background-color: ${point.color};">${point.label}</div>`,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18],
+                popupAnchor: [0, -20]
+            });
+            
+            const marker = L.marker([point.lat, point.lng], { icon: icon })
+                .bindPopup(`
+                    <div class="popup-title">${point.name}</div>
+                    <div class="popup-desc">${point.desc}</div>
+                `)
+                .addTo(map);
+            
+            markers[index] = marker; // インデックスを合わせてマーカーを保存
+        });
+        
+        // 初期状態で全ルートを表示
+        showFullRoute();
+    }
+
+    // ルートの線を表示する関数
+    function showRoute() {
+        if (polyline) {
+            map.removeLayer(polyline);
+        }
+        
+        const latlngs = routePoints.map(point => [point.lat, point.lng]);
+        polyline = L.polyline(latlngs, {
+            color: '#e74c3c',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '10, 10'
+        }).addTo(map);
+    }
+
+    // --- ボタン操作 ---
+
+    // 全ルートを表示
+    function showFullRoute() {
+        clearInterval(animationInterval);
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.2));
+        showRoute();
+    }
+
+    // ルートをアニメーション表示
+    function animateRoute() {
+        clearInterval(animationInterval);
+        let currentIndex = 0;
+        
+        function nextPoint() {
+            if (currentIndex >= routePoints.length) {
+                clearInterval(animationInterval);
+                // アニメーション終了後に全景表示
+                setTimeout(showFullRoute, 1000);
+                return;
+            }
+            focusPoint(currentIndex, true);
+            currentIndex++;
+        }
+        
+        nextPoint(); // 最初のポイントをすぐに表示
+        animationInterval = setInterval(nextPoint, 2000);
+    }
+
+    // ルート線の表示/非表示を切り替え
+    function toggleRoute() {
+        if (!polyline) {
+             showRoute();
+             return;
+        }
+        
+        if (map.hasLayer(polyline)) {
+            map.removeLayer(polyline);
+        } else {
+            polyline.addTo(map);
+        }
+    }
+
+    // 特定のポイントにフォーカス
+    function focusPoint(index, fromAnimation = false) {
+        // アニメーション中以外は、進行中のアニメーションを停止
+        if (!fromAnimation) {
+             clearInterval(animationInterval);
+        }
+        
+        const point = routePoints[index];
+        map.setView([point.lat, point.lng], 16, {
+            animate: true,
+            duration: 1
+        });
+        
+        // ポップアップを開く
+        if (markers[index]) {
+            setTimeout(() => {
+                markers[index].openPopup();
+            }, 500); // アニメーション後にポップアップ
+        }
+    }
+
+    // === 初期化 ===
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+</body>
+</html>
